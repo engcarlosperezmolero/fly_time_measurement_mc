@@ -3,8 +3,8 @@
 #include <WebSocketsServer.h>
 
 
-const char* ssid = "TUMBLING";
-const char* password = "letramp1400";
+const char* ssid = "fibertewifi800";
+const char* password = "argentina22";
 
 const int infrarrojo = 26; //G26
 
