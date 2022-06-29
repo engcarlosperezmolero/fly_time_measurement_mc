@@ -205,6 +205,9 @@
       </tbody>
     </table>
     </div>
+    <div class='contenedor_boton simulador'>
+      <button id='boton_descargar_respaldo' class='boton'>Descargar Respaldo</button>
+    </div>
   </div>
 
   <script>
@@ -219,31 +222,8 @@
     };
 
     function calcularSegundos3Decimales(tiempoVueloMiliSegs) {
-      return (tiempoVueloMiliSegs / 1000).toFixed(3);
+      return parseFloat((tiempoVueloMiliSegs / 1000)).toFixed(3);
     };
-
-    function simularSalto() {
-      if (numero_saltos === 1) {
-
-        
-        infoTiempos[`salto_${numero_saltos}`] = {actual: restar_a_dos_decimales(t0, t1), acumulado: restar_a_dos_decimales(t0, t1)};
-
-        var elemento_salto = document.getElementById(`tiempo_salto_${numero_saltos}`);
-        var elemento_acumulado = document.getElementById(`tiempo_acumulado_${numero_saltos}`);
-
-        elemento_salto.innerText = infoTiempos[`salto_${numero_saltos}`]['actual'];
-        elemento_acumulado.innerText = infoTiempos[`salto_${numero_saltos}`]['acumulado'];
-        numero_saltos += 1;
-      } 
-      
-      if (numero_saltos === 11) {
-          document.getElementById('estado_serie').innerText = 'FINALIZADA';
-          var infoGimnastaFinal = recopilarDatosGimnasta();
-          saveJsonTable(infoTiempos, infoGimnastaFinal);
-          numero_saltos += 1;
-        }
-    };
-
 
     var Socket;
 
@@ -251,21 +231,35 @@
       Socket = new WebSocket('ws://' + window.location.hostname + ':8197/');
   
       Socket.onmessage = function(event) {
+
+        // chequear si se envio la funcion de descargar respaldo (pasar la lista de micros a string en arduino y luego hacer split aqui)
+        
         if (event.data === 'comenzo') {
           estado_serie = 'comenzo';
           numero_saltos = 1;
           document.getElementById('estado_serie').innerText = 'COMENZADA';
+        } else if (numero_saltos <= 10) {
+          console.log(parseInt(event.data));
+          var tiempo_vuelo = calcularSegundos3Decimales(parseInt(event.data));
+          tiempo_acumulado = parseFloat(tiempo_acumulado) + parseFloat(tiempo_vuelo);
+          infoTiempos[`salto_${numero_saltos}`] = {actual: tiempo_vuelo, acumulado: tiempo_acumulado.toFixed(3)};
+          var elemento_salto = document.getElementById(`tiempo_salto_${numero_saltos}`);
+          var elemento_acumulado = document.getElementById(`tiempo_acumulado_${numero_saltos}`);
+          elemento_salto.innerText = tiempo_vuelo;
+          elemento_acumulado.innerText = tiempo_acumulado.toFixed(3);
+          numero_saltos ++;
+        }
+
+        if (numero_saltos == 11) {
+          document.getElementById('estado_serie').innerText = 'FINALIZADA';
+          var info_gimnasta = recopilarDatosGimnasta();
+          saveJsonTable(infoTiempos, info_gimnasta);
+          numero_saltos ++;
         };
 
-        // TO DO: check if event.data is also an int (coming from millis in arduino IDE)
-
-        processCommand(event);
+        
       };
 
-    };
-
-    function processCommand(event) {
-      console.log(`Sensor: ${event.data}. Estado serie: ${estado_serie}`);
     };
 
     window.onload = function(event) {
@@ -289,12 +283,20 @@
       c.click();
       };
 
+    function descargarRespaldo() {
+      Socket.send("descargar_respaldo");
+
+    };
+
     var boton_comenzar = document.getElementById('boton_comenzar');
+    var boton_descargar_respaldo = document.getElementById('boton_descargar_respaldo');
 
     boton_comenzar.addEventListener('click', comenzarSerie);
+    boton_descargar_respaldo.addEventListener('click', descargarRespaldo)
 
 
     var infoTiempos = {};
+    var tiempo_acumulado = 0.000;
     var numero_saltos = 0;
     var estado_serie = 'no comenzo';
 
