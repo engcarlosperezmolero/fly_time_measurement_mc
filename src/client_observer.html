@@ -275,6 +275,24 @@
           numero_saltos ++;
         }
 
+        if (json_payload["tiempo"] === "respaldo") {
+          var respaldo_tiempos = json_payload["respaldo_tiempos"].split(",");
+          var infoRespaldo = {};
+          tiempo_acumulado = 0.000;
+          for (var i = 0; i < respaldo_tiempos.length; i++) {
+            var tiempo_vuelo = calcularSegundos3Decimales(parseInt(respaldo_tiempos[i]));
+            tiempo_acumulado = parseFloat(tiempo_acumulado) + parseFloat(tiempo_vuelo);
+            infoTiempos[`salto_${i + 1}`] = {actual: tiempo_vuelo, acumulado: tiempo_acumulado.toFixed(3)};
+            // actualizando html
+            var elemento_salto = document.getElementById(`tiempo_salto_${i + 1}`);
+            var elemento_acumulado = document.getElementById(`tiempo_acumulado_${i + 1}`);
+            elemento_salto.innerText = tiempo_vuelo;
+            elemento_acumulado.innerText = tiempo_acumulado.toFixed(3);
+
+          };
+          
+        };
+
         if (numero_saltos == 11) {
           document.getElementById('estado_serie').innerText = 'FINALIZADA';
           numero_saltos ++;
