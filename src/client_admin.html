@@ -84,7 +84,6 @@
 
   .input_type {
     margin: 1ch 1ch 1ch 1ch;
-    display: flex;
   }
 
   .contenedor_tabla {
@@ -134,11 +133,6 @@
   box-shadow: none;
   transform: translateY(0);
 }
-
-.info_value {
-  margin-left: 0.2ch;
-  font-weight: lighter;
-}
 </style>
 
   <div class='contenedor_total'>
@@ -146,21 +140,23 @@
     <div class='contenedor_subtitulo'>Estado de la serie: <span id='estado_serie'>NO COMENZADA</span></div>
     <div class='contenedor_info_gim'>
       <div class="input_type">
-        <div for='fname'>Nombre:</div>
-        <div id="nombre" class="info_value">Carlos Perez</div>
+        <div for='fname'>Nombre / Orden:</div>
+        <input type='text' id='nombre' name='nombre'>
       </div>
       <div class="input_type">
-        <div for='lname'>Edad:</div>
-        <div id="edad" class="info_value">27</div>
+        <div for='lname'>Nivel:</div>
+        <input type='text' id='nivel' name='nivel'>
       </div>
       <div class="input_type">
         <div for='lname'>Categoria:</div>
-        <div id="categoria" class="info_value">C</div>
+        <input type='text' id='categoria' name='categoria'>
       </div>
       
       
     </div>
-
+    <div class='contenedor_boton'>
+    <button id='boton_comenzar' class='boton_comenzar'>Comenzar Serie</button>
+  </div>
     <div class='contenedor_boton simulador'>
     <button id='boton_simular' class='boton'>Simular Salto</button>
   </div>
@@ -227,10 +223,27 @@
       </tbody>
     </table>
     </div>
+    <div class="contenedor_fondo">
+      <div class='contenedor_boton'>
+        <button id='boton_descargar_respaldo' class='boton'>Descargar Respaldo</button>
+      </div>
+      <div class='contenedor_boton'>
+        <button id='boton_reiniciar' class='boton'>Nueva Serie</button>
+      </div>
+    </div>
     
   </div>
 
   <script>
+
+    function recopilarDatosGimnasta() {
+      var infoGimnasta = {
+        nombre: document.getElementById('nombre').value.split(' ').join('_'),
+        nivel: document.getElementById('nivel').value.split(' ').join('_'),
+        categoria: document.getElementById('categoria').value.split(' ').join('_')
+      };
+      return infoGimnasta;
+    };
 
     function calcularSegundos3Decimales(tiempoVueloMiliSegs) {
       return parseFloat((tiempoVueloMiliSegs / 1000)).toFixed(3);
@@ -244,6 +257,7 @@
       Socket.onmessage = function(event) {
 
         var json_payload = JSON.parse(event.data);
+        console.log(json_payload);
         // chequear si se envio la funcion de descargar respaldo (pasar la lista de micros a string en arduino y luego hacer split aqui)
         
         if (json_payload["estado_serie"] === 'comenzo' && json_payload["tiempo"] === "no_disponible") {
@@ -251,16 +265,36 @@
           estado_serie = 'comenzo';
           numero_saltos = 1;
           document.getElementById('estado_serie').innerText = 'COMENZADA';
-        } else if (numero_saltos <= 10 && (json_payload["tiempo"] !== "no_disponible" && json_payload["tiempo"] !== "respaldo")) {
+  
+        } else if (numero_saltos <= 10 && !["no_disponible", "respaldo", "reiniciar"].includes(json_payload["tiempo"])) {
+          // calculando tiempos
           console.log(parseInt(json_payload["tiempo"]));
           var tiempo_vuelo = calcularSegundos3Decimales(parseInt(json_payload["tiempo"]));
           tiempo_acumulado = parseFloat(tiempo_acumulado) + parseFloat(tiempo_vuelo);
           infoTiempos[`salto_${numero_saltos}`] = {actual: tiempo_vuelo, acumulado: tiempo_acumulado.toFixed(3)};
+          // actualizando html
           var elemento_salto = document.getElementById(`tiempo_salto_${numero_saltos}`);
           var elemento_acumulado = document.getElementById(`tiempo_acumulado_${numero_saltos}`);
           elemento_salto.innerText = tiempo_vuelo;
           elemento_acumulado.innerText = tiempo_acumulado.toFixed(3);
+          // sumando al proximo salto
           numero_saltos ++;
+        };
+
+        
+
+        if (json_payload["tiempo"] === "respaldo") {
+          var respaldo_tiempos = json_payload["respaldo_tiempos"].split(",");
+          var infoRespaldo = {};
+          var total = 0;
+          for (var i = 0; i < respaldo_tiempos.length; i++) {
+            var tiempo_vuelo = calcularSegundos3Decimales(parseInt(respaldo_tiempos[i]));
+            total += parseFloat(tiempo_vuelo);
+            infoRespaldo[`salto_${i + 1}`] = tiempo_vuelo;
+          };
+          infoRespaldo["total"] = total.toFixed(3);
+          var info_gimnasta = recopilarDatosGimnasta();
+          saveJsonTable(infoRespaldo, info_gimnasta);
         }
 
         if (numero_saltos == 11) {
@@ -279,16 +313,49 @@
       initSocketConn();
     };
 
+    function comenzarSerie() {
+      json_payload_send = {
+            comenzo_serie: "si",
+            reiniciar: "no",
+            descargar_respaldo: "no",
+            nombre: document.getElementById('nombre').value,
+            nivel: document.getElementById('nivel').value,
+            categoria: document.getElementById('categoria').value
+          };
+      Socket.send(JSON.stringify(json_payload_send));
+      document.getElementById('boton_comenzar').setAttribute('disabled', 'disabled');
+    };
+
+    function saveJsonTable(info_saltos, info_gimnasta) {
+      var data = JSON.stringify(info_saltos);
+      var c = document.createElement('a');
+      c.download = `${info_gimnasta['nombre']}_${info_gimnasta['nivel']}_${info_gimnasta['categoria']}.json`;
+
+      var t = new Blob([data], {
+      type: 'text/plain'
+      });
+      c.href = window.URL.createObjectURL(t);
+      c.click();
+      };
+
+    function descargarRespaldo() {
+      json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "si", nombre: "", nivel: "", categoria: ""};
+      Socket.send(JSON.stringify(json_payload_send));
+    };
+
     function iniciarNuevaSerie() {
+      json_payload_send = {comenzo_serie: "no", reiniciar: "si", descargar_respaldo: "no", nombre: "", nivel: "", categoria: ""};
+      Socket.send(JSON.stringify(json_payload_send));
+
       // colocar en blanco todo
       infoTiempos = {};
       tiempo_acumulado = 0.000;
       numero_saltos = 0;
       estador_serie = "no comenzo";
-      json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no"};
+      json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no", nombre: "", nivel: "", categoria: ""};
       document.getElementById('estado_serie').innerText = 'NO COMENZADA';
       document.getElementById('nombre').value = "";
-      document.getElementById('edad').value = "";
+      document.getElementById('nivel').value = "";
       document.getElementById('categoria').value = "";
 
       for (var i = 1; i <= 10; i++) {
@@ -297,8 +364,18 @@
         elemento_salto.innerText = "";
         elemento_acumulado.innerText = "";
       };
-
+    
+      // habilitar boton de comenzar
+      document.getElementById('boton_comenzar').removeAttribute('disabled');
     };
+
+    var boton_comenzar = document.getElementById('boton_comenzar');
+    var boton_descargar_respaldo = document.getElementById('boton_descargar_respaldo');
+    var boton_reiniciar = document.getElementById('boton_reiniciar');
+
+    boton_comenzar.addEventListener('click', comenzarSerie);
+    boton_descargar_respaldo.addEventListener('click', descargarRespaldo);
+    boton_reiniciar.addEventListener('click', iniciarNuevaSerie);
 
 
 
@@ -306,7 +383,7 @@
     var tiempo_acumulado = 0.000;
     var numero_saltos = 0;
     var estado_serie = 'no comenzo';
-    var json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no"};
+    var json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no", nombre: "", nivel: "", categoria: ""};
 
 
 

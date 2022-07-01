@@ -84,6 +84,7 @@
 
   .input_type {
     margin: 1ch 1ch 1ch 1ch;
+    display: flex;
   }
 
   .contenedor_tabla {
@@ -133,6 +134,11 @@
   box-shadow: none;
   transform: translateY(0);
 }
+
+.info_value {
+  margin-left: 0.2ch;
+  font-weight: lighter;
+}
 </style>
 
   <div class='contenedor_total'>
@@ -140,23 +146,21 @@
     <div class='contenedor_subtitulo'>Estado de la serie: <span id='estado_serie'>NO COMENZADA</span></div>
     <div class='contenedor_info_gim'>
       <div class="input_type">
-        <div for='fname'>Nombre completo:</div>
-        <input type='text' id='nombre' name='nombre'>
+        <div for='fname'>Nombre / Orden:</div>
+        <div id="nombre" class="info_value"></div>
       </div>
       <div class="input_type">
-        <div for='lname'>Edad:</div>
-        <input type='text' id='edad' name='edad'>
+        <div for='lname'>Nivel:</div>
+        <div id="nivel" class="info_value"></div>
       </div>
       <div class="input_type">
         <div for='lname'>Categoria:</div>
-        <input type='text' id='categoria' name='categoria'>
+        <div id="categoria" class="info_value"></div>
       </div>
       
       
     </div>
-    <div class='contenedor_boton'>
-    <button id='boton_comenzar' class='boton_comenzar'>Comenzar Serie</button>
-  </div>
+
     <div class='contenedor_boton simulador'>
     <button id='boton_simular' class='boton'>Simular Salto</button>
   </div>
@@ -223,27 +227,10 @@
       </tbody>
     </table>
     </div>
-    <div class="contenedor_fondo">
-      <div class='contenedor_boton'>
-        <button id='boton_descargar_respaldo' class='boton'>Descargar Respaldo</button>
-      </div>
-      <div class='contenedor_boton'>
-        <button id='boton_reiniciar' class='boton'>Nueva Serie</button>
-      </div>
-    </div>
     
   </div>
 
   <script>
-
-    function recopilarDatosGimnasta() {
-      var infoGimnasta = {
-        nombre: document.getElementById('nombre').value.split(' ').join('_'),
-        edad: document.getElementById('edad').value.split(' ').join('_'),
-        categoria: document.getElementById('categoria').value.split(' ').join('_')
-      };
-      return infoGimnasta;
-    };
 
     function calcularSegundos3Decimales(tiempoVueloMiliSegs) {
       return parseFloat((tiempoVueloMiliSegs / 1000)).toFixed(3);
@@ -257,14 +244,25 @@
       Socket.onmessage = function(event) {
 
         var json_payload = JSON.parse(event.data);
+        console.log(json_payload);
         // chequear si se envio la funcion de descargar respaldo (pasar la lista de micros a string en arduino y luego hacer split aqui)
+
+        if (json_payload["reiniciar"] === "si") {
+          iniciarNuevaSerie();
+          return 0;
+        };
+
         
         if (json_payload["estado_serie"] === 'comenzo' && json_payload["tiempo"] === "no_disponible") {
           console.log("comenzo");
           estado_serie = 'comenzo';
           numero_saltos = 1;
           document.getElementById('estado_serie').innerText = 'COMENZADA';
-  
+          // colocando los datos del gimnasta
+          var info = json_payload["info_gimnasta"].split(",");
+          document.getElementById('nombre').innerText = info[0];
+          document.getElementById('nivel').innerText = info[1];
+          document.getElementById('categoria').innerText = info[2];
         } else if (numero_saltos <= 10 && (json_payload["tiempo"] !== "no_disponible" && json_payload["tiempo"] !== "respaldo")) {
           console.log(parseInt(json_payload["tiempo"]));
           var tiempo_vuelo = calcularSegundos3Decimales(parseInt(json_payload["tiempo"]));
@@ -275,35 +273,10 @@
           elemento_salto.innerText = tiempo_vuelo;
           elemento_acumulado.innerText = tiempo_acumulado.toFixed(3);
           numero_saltos ++;
-          if (numero_saltos - 1 === 1) {
-          var info_gimnasta = recopilarDatosGimnasta();
-          json_payload_send["nombre"] = info_gimnasta["nombre"];
-          json_payload_send["edad"] = info_gimnasta["edad"];
-          json_payload_send["categoria"] = info_gimnasta["categoria"];
-          Socket.send(JSON.stringify(json_payload_send));
-        }
-        }
-
-        
-
-        if (json_payload["tiempo"] === "respaldo") {
-          var respaldo_tiempos = json_payload["respaldo_tiempos"].split(",");
-          var infoRespaldo = {};
-          var total = 0;
-          for (var i = 0; i < respaldo_tiempos.length; i++) {
-            var tiempo_vuelo = calcularSegundos3Decimales(parseInt(respaldo_tiempos[i]));
-            total += parseFloat(tiempo_vuelo);
-            infoRespaldo[`salto_${i + 1}`] = tiempo_vuelo;
-          };
-          infoRespaldo["total"] = total.toFixed(3);
-          var info_gimnasta = recopilarDatosGimnasta();
-          saveJsonTable(infoRespaldo, info_gimnasta);
         }
 
         if (numero_saltos == 11) {
           document.getElementById('estado_serie').innerText = 'FINALIZADA';
-          var info_gimnasta = recopilarDatosGimnasta();
-          saveJsonTable(infoTiempos, info_gimnasta);
           numero_saltos ++;
         };
 
@@ -316,34 +289,7 @@
       initSocketConn();
     };
 
-    function comenzarSerie() {
-      json_payload_send["comenzo_serie"] = "si";
-      Socket.send(JSON.stringify(json_payload_send));
-      document.getElementById('boton_comenzar').setAttribute('disabled', 'disabled');
-    };
-
-    function saveJsonTable(info_saltos, info_gimnasta) {
-      var data = JSON.stringify(info_saltos);
-      var c = document.createElement('a');
-      c.download = `${info_gimnasta['nombre']}_${info_gimnasta['edad']}_${info_gimnasta['categoria']}.json`;
-
-      var t = new Blob([data], {
-      type: 'text/plain'
-      });
-      c.href = window.URL.createObjectURL(t);
-      c.click();
-      };
-
-    function descargarRespaldo() {
-      json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "si", nombre: "", edad: "", categoria: ""};
-      Socket.send(JSON.stringify(json_payload_send));
-      json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no", nombre: "", edad: "", categoria: ""};
-    };
-
     function iniciarNuevaSerie() {
-      json_payload_send = {comenzo_serie: "no", reiniciar: "si", descargar_respaldo: "no", nombre: "", edad: "", categoria: ""};
-      Socket.send(JSON.stringify(json_payload_send));
-
       // colocar en blanco todo
       infoTiempos = {};
       tiempo_acumulado = 0.000;
@@ -351,9 +297,9 @@
       estador_serie = "no comenzo";
       json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no"};
       document.getElementById('estado_serie').innerText = 'NO COMENZADA';
-      document.getElementById('nombre').value = "";
-      document.getElementById('edad').value = "";
-      document.getElementById('categoria').value = "";
+      document.getElementById('nombre').innerText = "";
+      document.getElementById('nivel').innerText = "";
+      document.getElementById('categoria').innerText = "";
 
       for (var i = 1; i <= 10; i++) {
         var elemento_salto = document.getElementById(`tiempo_salto_${i}`);
@@ -361,18 +307,8 @@
         elemento_salto.innerText = "";
         elemento_acumulado.innerText = "";
       };
-    
-      // habilitar boton de comenzar
-      document.getElementById('boton_comenzar').removeAttribute('disabled');
+
     };
-
-    var boton_comenzar = document.getElementById('boton_comenzar');
-    var boton_descargar_respaldo = document.getElementById('boton_descargar_respaldo');
-    var boton_reiniciar = document.getElementById('boton_reiniciar');
-
-    boton_comenzar.addEventListener('click', comenzarSerie);
-    boton_descargar_respaldo.addEventListener('click', descargarRespaldo);
-    boton_reiniciar.addEventListener('click', iniciarNuevaSerie);
 
 
 
@@ -380,7 +316,7 @@
     var tiempo_acumulado = 0.000;
     var numero_saltos = 0;
     var estado_serie = 'no comenzo';
-    var json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no", nombre: "", edad: "", categoria: ""};
+    var json_payload_send = {comenzo_serie: "no", reiniciar: "no", descargar_respaldo: "no"};
 
 
 
