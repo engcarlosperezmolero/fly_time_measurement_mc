@@ -6,14 +6,14 @@ Lo primero que se verifica dentro del loop es si la variable ```comenzo``` tiene
 Las acciones dentro del loop se realizan cada cierto tiempo, este tiempo esta establecido dentro de la variable ```tiempoEspera``` que es de 5 milisegundos.
 
 
-### Variable ```comenzo``` con valor "no"
+#### Variable ```comenzo``` con valor "no"
 ---
 Mientras no se haya comenzado la serie de trampolin (No se ha presionado el boton en el cliente administrador) se realiza una verificacion de si el gimnasta se encuentra en el aire o en la lona. Para este fin se monitorea el valor de las variables ```infrarrojo``` y ```estadoAnterior```.
 
 El objetivo es que mientras el gimnasta este en el aire el Administrador (persona que controla el cliente administrador) pueda presionar el boton y cambiar el valor de la variable ```comenzo``` a "si".
 
 
-### Variable ```comenzo``` con valor "si"
+#### Variable ```comenzo``` con valor "si"
 ---
 Cuando ya se comenzo la serie de trampolin se van a seguir monitoreando los valores de ```infrarrojo``` y ```estadoAnterior```, o dicho de otra manera si el gimnasta esta en el aire o en la lona, al chequear el ```estadoAnterior``` se puede conocer el momento en que el gimnasta pasa de estar en la lona a estar en el aire y viceversa.
 
