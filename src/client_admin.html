@@ -48,12 +48,21 @@
   .contenedor_fondo {
     align-self: center;
     display: flex;
+    /*background: yellow !important;*/
   }
 
   .contenedor_boton {
     margin: 1ch 1ch 1ch 1ch;
     align-self: center;
+    width: 100%;
+    min-height: 110px;
     /*background: red;*/
+  }
+
+  .contenedor_boton_bajo {
+    margin: 1ch 1ch 1ch 1ch;
+    align-self: center;
+    background: red;
   }
   .boton {
     cursor: pointer;
@@ -101,11 +110,11 @@
   cursor: pointer;
   display: inline-block;
   font-family: Roobert,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';
-  font-size: 16px;
+  font-size: 27px;
   font-weight: 600;
   line-height: normal;
   margin: 0;
-  min-height: 60px;
+  min-height: 110px;
   min-width: 0;
   outline: none;
   padding: 16px 24px;
@@ -224,10 +233,10 @@
     </table>
     </div>
     <div class="contenedor_fondo">
-      <div class='contenedor_boton'>
+      <div class='contenedor_boton_bajo'>
         <button id='boton_descargar_respaldo' class='boton'>Descargar Respaldo</button>
       </div>
-      <div class='contenedor_boton'>
+      <div class='contenedor_boton_bajo'>
         <button id='boton_reiniciar' class='boton'>Nueva Serie</button>
       </div>
     </div>
@@ -252,7 +261,7 @@
     var Socket;
 
     function initSocketConn() {
-      Socket = new WebSocket('ws://' + window.location.hostname + ':8197/');
+      Socket = new WebSocket('ws://192.168.4.1:8197/');
   
       Socket.onmessage = function(event) {
 
