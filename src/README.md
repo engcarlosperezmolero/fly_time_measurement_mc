@@ -134,4 +134,5 @@ Cualquier otro endpoint solo devolvera "Not Found"
 
 ## Instaladas por Library Management de Arduino
 [ArduinoJson de Benoit Blanchon Version 6.19.4](https://arduinojson.org/)
+
 [WebSockets de Markus Sattler Version 2.3.6](https://github.com/Links2004/arduinoWebSockets)
