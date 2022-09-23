@@ -127,3 +127,11 @@ Url completa es http://192.168.4.1:8097/
 ### GET Not Found
 
 Cualquier otro endpoint solo devolvera "Not Found"
+
+# Librerias usadas
+## Instaladas por ZIP
+[ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
+
+## Instaladas por Library Management de Arduino
+[ArduinoJson de Benoit Blanchon Version 6.19.4](https://arduinojson.org/)
+[WebSockets de Markus Sattler Version 2.3.6](https://github.com/Links2004/arduinoWebSockets)
