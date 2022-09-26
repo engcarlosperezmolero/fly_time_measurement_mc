@@ -129,9 +129,10 @@
   will-change: transform;
 }
 
-.boton_comenzar:disabled {
+.boton_comenzar:disabled, .boton_abajo:disabled, .boton_arriba:disabled {
   pointer-events: none;
   background-color: #808080;
+  border: 1px solid #1A1A1A;
 }
 
 .boton_comenzar:hover {
@@ -189,37 +190,58 @@
 }
 
 .contenedor_activar_ajustes, .label_activar_ajustes {
+    margin-top: 8px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
     justify-content: space-around;
-    width: 12em;
+    width: 14em;
     font-family: Arial, sans-serif;
     font-size: 13px;
     font-weight: 550;
 }
 
-
-.label_activar_ajustes input + span::before {
+.label_activar_ajustes {
     position: relative;
+}
+
+
+.label_activar_ajustes input + span:before {
+    position: absolute;
     content: "";
-    right: 0;
-    top: 4px;
+    top: -5px;
+    left: -4px;
     width: 60px;
     height: 30px;
     border-radius: 20px;
     background-color: #ccc;
+    user-select: none;
 }
 
-.label_activar_ajustes input + span::after {
-    position: relative;
+span {
+    user-select: none;
+}
+
+.label_activar_ajustes input + span:after {
+    position: absolute;
     content: "";
-    right: 2px;
-    top: 6x;
+    left: 26px;
     width: 26px;
     height: 26px;
+    top: -3px;
     border-radius: 50%;
     background-color: #fff;
-    transform: translateX(-30px);
+    transform: translateX(-26px);
+    user-select: none;
+    
+}
+
+.label_activar_ajustes input:checked + span::before {
+    background-color: #000;
+}
+
+.label_activar_ajustes input:checked + span::after {
+    transform: translateX(0px);
 }
 
 </style>
@@ -314,8 +336,8 @@
     </table>
     </div>
     <div class='botones_ajuste'>
-      <div class='boton_arriba' id='ajuste_arriba'>▲</div>
-      <div class='boton_abajo' id='ajuste_abajo'>▼</div>
+      <button class='boton_arriba' id='ajuste_arriba'>▲</button>
+      <button class='boton_abajo' id='ajuste_abajo'>▼</button>
     </div>
     </div>
 
@@ -330,7 +352,7 @@
     </div>
 
     <div class='contenedor_activar_ajustes'>
-        <label class='label_activar_ajustes'>
+        <label class='label_activar_ajustes' id='label_activar_ajustes'>
             <input type='checkbox' name='box' id='activar_ajustes'/>
             <span>Ajustar Tiempos</span>
         </label>
@@ -429,6 +451,8 @@
     window.onload = function(event) {
       initSocketConn();
       window.tiempos_totales = [];
+      document.getElementById('ajuste_arriba').setAttribute('disabled', 'disabled');
+      document.getElementById('ajuste_abajo').setAttribute('disabled', 'disabled');
     };
 
     function comenzarSerie() {
@@ -492,11 +516,12 @@
         indiceComienzo--;
         var acumulado = 0;  
         for (var nro = 0; nro < 10; nro++) {
-            acumulado += tiempos_totales[indiceComienzo + nro];
+            var tiempo_actual = calcularSegundos3Decimales(parseInt(tiempos_totales[indiceComienzo + nro]));
+            acumulado += parseFloat(tiempo_actual);
             var celda_tiempo = document.getElementById(`tiempo_salto_${nro + 1}`);
             var celda_tiempo_acumulado = document.getElementById(`tiempo_acumulado_${nro + 1}`);
-            celda_tiempo.innerText = tiempos_totales[indiceComienzo + nro];
-            celda_tiempo_acumulado.innerText = acumulado;
+            celda_tiempo.innerText = tiempo_actual;
+            celda_tiempo_acumulado.innerText = acumulado.toFixed(3);
         }
         
     };
@@ -506,29 +531,43 @@
         indiceComienzo++;
         var acumulado = 0;
         for (var nro = 0; nro < 10; nro++) {
-            acumulado += tiempos_totales[indiceComienzo + nro];
+            var tiempo_actual = calcularSegundos3Decimales(parseInt(tiempos_totales[indiceComienzo + nro]));
+            acumulado += parseFloat(tiempo_actual);
             var celda_tiempo = document.getElementById(`tiempo_salto_${nro + 1}`);
             var celda_tiempo_acumulado = document.getElementById(`tiempo_acumulado_${nro + 1}`);
-            celda_tiempo.innerText = tiempos_totales[indiceComienzo + nro];
-            celda_tiempo_acumulado.innerText = acumulado;
+            celda_tiempo.innerText = tiempo_actual;
+            celda_tiempo_acumulado.innerText = acumulado.toFixed(3);
         }
     };
 
     var tiempos_test = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
     var indiceComienzo = 7;
 
+    function activarAjustes() {
+        if (document.getElementById('activar_ajustes').checked) {
+            document.getElementById('ajuste_arriba').removeAttribute('disabled');
+            document.getElementById('ajuste_abajo').removeAttribute('disabled');
+        } else {
+            document.getElementById('ajuste_arriba').setAttribute('disabled', 'disabled');
+            document.getElementById('ajuste_abajo').setAttribute('disabled', 'disabled');
+        }
+    };
+
     var boton_comenzar = document.getElementById('boton_comenzar');
     var boton_descargar_respaldo = document.getElementById('boton_descargar_respaldo');
     var boton_reiniciar = document.getElementById('boton_reiniciar');
     var boton_ajuste_arriba = document.getElementById('ajuste_arriba');
     var boton_ajuste_abajo = document.getElementById('ajuste_abajo');
+    var ajustar_tiempo_checkbox = document.getElementById('label_activar_ajustes');
 
+
+    ajustar_tiempo_checkbox.addEventListener('click', activarAjustes);
 
     boton_comenzar.addEventListener('click', comenzarSerie);
     boton_descargar_respaldo.addEventListener('click', descargarRespaldo);
     boton_reiniciar.addEventListener('click', iniciarNuevaSerie);
-    boton_ajuste_arriba.addEventListener('click', ajustarTiempoArriba);
-    boton_ajuste_abajo.addEventListener('click', ajustarTiempoAbajo);
+    boton_ajuste_arriba.addEventListener('click', ajustarTiempoAbajo);
+    boton_ajuste_abajo.addEventListener('click', ajustarTiempoArriba);
 
     var infoTiempos = {};
     var tiempo_acumulado = 0.000;
